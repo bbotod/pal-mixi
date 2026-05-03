@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAL MIXI — Logic Trainer</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  background: #f5f4f0;
+  color: #1a1a1a;
+  min-height: 100vh;
+}
+header {
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.logo { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+.logo span { color: #2563eb; }
+.subtitle { font-size: 13px; color: #777; }
+.header-tabs { margin-left: auto; display: flex; gap: 4px; }
+.tab-btn {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #555;
+  transition: all 0.15s;
+}
+.tab-btn:hover { background: #f0f4ff; border-color: #bfdbfe; color: #2563eb; }
+.tab-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+/* ── Main layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  height: calc(100vh - 57px);
+}
+.panel {
+  background: #fff;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel.right { border-right: none; border-left: 1px solid #e0e0e0; }
+.panel-head {
+  padding: 11px 16px;
+  border-bottom: 1px solid #e8e8e8;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #555;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-head-action {
+  margin-left: auto;
+  font-size: 11px;
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.panel-head-action:hover { text-decoration: underline; }
+.panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+
+/* ── Task list ── */
+.folder-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  text-transform: uppercase; color: #999; padding: 10px 4px 6px;
+}
+.task-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 6px; cursor: pointer;
+  margin-bottom: 2px; transition: background 0.1s;
+  border: 1px solid transparent;
+}
+.task-item:hover { background: #f0f4ff; }
+.task-item.active { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.task-item .name { flex: 1; font-size: 14px; }
+.task-item .vars { font-size: 11px; font-weight: 600; color: #aaa; font-family: monospace; }
+.task-item.active .vars { color: #93c5fd; }
+.task-item .del-btn {
+  opacity: 0; font-size: 13px; color: #f87171; cursor: pointer;
+  padding: 2px 4px; border-radius: 3px; transition: opacity 0.1s;
+}
+.task-item:hover .del-btn { opacity: 1; }
+.upload-btn {
+  width: 100%; padding: 8px; border: 1.5px dashed #ccc;
+  border-radius: 6px; background: none; color: #777;
+  font-size: 13px; cursor: pointer; margin-bottom: 12px; transition: all 0.15s;
+}
+.upload-btn:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+
+/* ── Center ── */
+.center {
+  background: #f5f4f0; padding: 24px; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+}
+.empty-msg { color: #aaa; font-size: 15px; text-align: center; margin-top: 80px; line-height: 2; }
+.card {
+  background: #fff; border: 1px solid #e0e0e0;
+  border-radius: 12px; padding: 24px;
+  width: 100%; max-width: 520px;
+}
+.card-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; color: #111; }
+.card-meta { font-size: 13px; color: #888; margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.badge-blue { background: #dbeafe; color: #1e40af; }
+.badge-orange { background: #ffedd5; color: #9a3412; }
+.badge-yellow { background: #fef9c3; color: #854d0e; }
+.badge-green { background: #dcfce7; color: #166534; }
+
+.section-label {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #888; margin-bottom: 12px; margin-top: 20px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: #eee; }
+
+.switches { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.switch-unit { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.switch-var-label {
+  font-size: 20px; font-weight: 700; font-family: Georgia, serif;
+  color: #333; transition: color 0.15s; min-width: 28px; text-align: center;
+}
+.switch-var-label.on { color: #16a34a; }
+.switch-var-label.off { color: #ccc; text-decoration: line-through; }
+.toggle { position: relative; width: 48px; height: 26px; cursor: pointer; }
+.toggle input { display: none; }
+.toggle-bg { position: absolute; inset: 0; background: #d1d5db; border-radius: 13px; transition: background 0.2s; }
+.toggle input:checked ~ .toggle-bg { background: #16a34a; }
+.toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; background: #fff;
+  border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s;
+}
+.toggle input:checked ~ .toggle-bg .toggle-knob { transform: translateX(22px); }
+.switch-val { font-size: 13px; font-weight: 700; color: #ccc; font-family: monospace; }
+.switch-val.on { color: #16a34a; }
+
+.leds { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+.led-unit { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.led { width: 30px; height: 30px; border-radius: 50%; background: #e5e7eb; border: 2px solid #d1d5db; transition: all 0.15s; }
+.led.on { background: #f97316; border-color: #ea580c; box-shadow: 0 0 0 5px #fed7aa; }
+.led-name { font-size: 16px; font-weight: 700; color: #bbb; font-family: Georgia, serif; }
+.led-unit.on .led-name { color: #ea580c; }
+
+.expr-box {
+  background: #f8f8f8; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 14px 18px; font-size: 18px; min-height: 52px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px;
+  line-height: 2; font-family: Georgia, serif;
+}
+.evar { color: #1d4ed8; font-weight: 700; }
+.ecomp { color: #dc2626; font-weight: 700; text-decoration: overline; text-decoration-thickness: 1.5px; }
+.earrow { color: #999; margin: 0 8px; font-size: 15px; }
+.eout1 { color: #16a34a; font-weight: 700; }
+.eout0 { color: #bbb; }
+.eoutx { color: #b45309; font-weight: 700; }
+.edim { color: #bbb; font-size: 14px; }
+
+/* ── Mentés/Letöltés sáv ── */
+.action-bar {
+  display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; align-items: center;
+}
+.btn {
+  padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; border: 1px solid; font-family: inherit;
+}
+.btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-outline { background: #fff; border-color: #d1d5db; color: #374151; }
+.btn-outline:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+.btn-green { background: #16a34a; border-color: #16a34a; color: #fff; }
+.btn-green:hover { background: #15803d; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* ── Igazságtábla ── */
+.truth-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.truth-table th {
+  padding: 6px 8px; text-align: center; font-family: Georgia, serif;
+  font-weight: 700; font-size: 15px; color: #1d4ed8;
+  border-bottom: 2px solid #e5e7eb; background: #fafafa;
+}
+.truth-table td {
+  padding: 5px 8px; text-align: center; border-bottom: 1px solid #f3f4f6;
+  font-family: monospace; font-size: 13px; color: #666;
+}
+.truth-table tr.current td { background: #eff6ff; }
+.truth-table td.v1 { color: #1d4ed8; font-weight: 700; }
+.truth-table td.v0 { color: #ccc; }
+.truth-table td.out1 { color: #16a34a; font-weight: 700; font-size: 15px; }
+.truth-table td.out0 { color: #ddd; }
+.truth-table td.outx { color: #b45309; font-weight: 700; }
+
+.mlabel { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-family: monospace; font-weight: 600; }
+.chip-m { background: #dbeafe; color: #1e40af; }
+.chip-d { background: #fef9c3; color: #854d0e; }
+
+.raw-expr {
+  background: #fafafa; border: 1px solid #e5e7eb; border-radius: 6px;
+  padding: 10px 14px; font-family: Georgia, serif; font-size: 15px;
+  color: #444; word-break: break-all; line-height: 2; margin-top: 14px;
+}
+.rb { color: #1d4ed8; font-weight: 700; }
+.rt { color: #dc2626; font-weight: 700; text-decoration: overline; text-decoration-thickness: 1.5px; }
+.rp { color: #bbb; }
+
+/* ── Builder view ── */
+#builderView { display: none; }
+.builder-card {
+  background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+  padding: 24px; width: 100%; max-width: 600px;
+}
+.builder-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+.form-row { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-input {
+  width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px;
+  font-size: 14px; font-family: Georgia, serif; background: #fff; color: #111;
+  outline: none; transition: border-color 0.15s;
+}
+.form-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.form-hint { font-size: 12px; color: #888; margin-top: 4px; }
+.preview-box {
+  background: #f8f8f8; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 12px 16px; font-family: monospace; font-size: 14px;
+  color: #444; min-height: 40px; margin-top: 8px; word-break: break-all;
+}
+.var-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.var-chip-btn {
+  padding: 6px 12px; border-radius: 6px; border: 1.5px solid #e0e0e0;
+  background: #fff; cursor: pointer; font-size: 14px; font-family: Georgia, serif;
+  font-weight: 700; color: #555; transition: all 0.15s;
+}
+.var-chip-btn:hover { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+.var-chip-btn.sel-pos { border-color: #2563eb; background: #dbeafe; color: #1d4ed8; }
+.var-chip-btn.sel-neg { border-color: #dc2626; background: #fee2e2; color: #dc2626; text-decoration: overline; text-decoration-thickness: 1.5px; }
+.term-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 36px; }
+.term-tag {
+  padding: 4px 10px; border-radius: 20px; background: #eff6ff; border: 1px solid #bfdbfe;
+  font-size: 13px; font-family: Georgia, serif; color: #1d4ed8; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.term-tag:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+.term-tag .x { font-size: 12px; opacity: 0.7; }
+
+.toast {
+  position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+  background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 8px;
+  font-size: 14px; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+.watermark {
+  position: fixed; bottom: 10px; right: 16px;
+  font-size: 12px; color: #bbb; pointer-events: none; z-index: 999;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PAL <span>MIXI</span></div>
+  <div class="subtitle">Logikai Áramkör Tréner</div>
+  <div class="header-tabs">
+    <button class="tab-btn active" onclick="showView('simulator')">▶ Szimulátor</button>
+    <button class="tab-btn" onclick="showView('builder')">✏️ Feladat létrehozása</button>
+  </div>
+</header>
+
+<div id="simulatorView">
+  <div class="layout">
+
+    <!-- LEFT: Task list -->
+    <div class="panel">
+      <div class="panel-head">
+        Feladatok
+        <span class="panel-head-action" onclick="document.getElementById('mxfInput').click()">+ Feltöltés</span>
+      </div>
+      <input type="file" id="mxfInput" accept=".mxf" style="display:none" multiple>
+      <div class="panel-body" id="taskList">
+        <div style="color:#bbb;font-size:13px;text-align:center;padding:20px 0">Loading…</div>
+      </div>
+    </div>
+
+    <!-- CENTER: Device -->
+    <div class="center">
+      <div class="empty-msg" id="emptyMsg">← Válassz feladatot a kezdéshez</div>
+      <div id="deviceArea" style="display:none; width:100%; max-width:520px;">
+        <div class="card">
+          <div class="card-title" id="taskTitle"></div>
+          <div class="card-meta" id="taskMeta"></div>
+          <div class="section-label">Bemeneti kapcsolók</div>
+          <div class="switches" id="switches"></div>
+          <div class="section-label">Kimeneti LED</div>
+          <div class="leds" id="leds"></div>
+          <div class="section-label">Aktuális tag</div>
+          <div class="expr-box" id="exprBox">
+            <span class="edim">— kapcsold át a kapcsolókat a kimenet megtekintéséhez —</span>
+          </div>
+          <div class="action-bar">
+            <button class="btn btn-outline" onclick="downloadCurrent()">⬇ .mxf letöltése</button>
+            <button class="btn btn-outline btn-sm" onclick="copyMxf()">📋 Másolás</button>
+            <span id="rawMxfText" style="font-family:monospace;font-size:12px;color:#aaa;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Igazságtábla -->
+    <div class="panel right">
+      <div class="panel-head">Igazságtábla</div>
+      <div class="panel-body" id="rightPanel">
+        <div style="color:#bbb;font-size:13px;padding:12px 0;text-align:center">Nincs betöltött feladat</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- BUILDER VIEW -->
+<div id="builderView">
+  <div class="center" style="padding-top:28px">
+    <div class="builder-card">
+      <h2>✏️ Új feladat létrehozása</h2>
+
+      <div class="form-row">
+        <label class="form-label">Feladat neve</label>
+        <input class="form-input" type="text" id="bName" placeholder="pl. sajat_feladat" oninput="updatePreview()">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Kimeneti jel (opcionális)</label>
+        <input class="form-input" type="text" id="bOutput" placeholder="pl. e  (hagyd üresen, ha nincs)" maxlength="1" oninput="updatePreview()">
+        <div class="form-hint">Egyetlen betű — a kimeneti LED neve</div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Változók</label>
+        <div class="var-grid" id="varGrid"></div>
+        <div class="form-hint">Kattints egyszer = pozitív (A), még egyszer = komplemens (Ā), ismét = eltávolít</div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Mintermek <span style="color:#2563eb;font-size:11px">(kimenet = 1)</span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-outline btn-sm" onclick="addTerm('mt')">+ Tag hozzáadása</button>
+          <span style="font-size:12px;color:#aaa">— állítsd be a változókat fent, majd add hozzá</span>
+        </div>
+        <div class="term-list" id="mtList"></div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Nemtörődöm tagok <span style="color:#b45309;font-size:11px">(kimenet = X)</span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-outline btn-sm" onclick="addTerm('dc')">+ Tag hozzáadása</button>
+        </div>
+        <div class="term-list" id="dcList"></div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Előnézet (.mxf)</label>
+        <div class="preview-box" id="mxfPreview">—</div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" onclick="saveTask()">💾 Mentés a szerverre</button>
+        <button class="btn btn-green" onclick="downloadBuilt()">⬇ .mxf letöltése</button>
+        <button class="btn btn-outline" onclick="loadBuiltIntoSim()">▶ Tesztelés szimulátorban</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="watermark">Készítette: <strong>Barna Botond</strong></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let cur = null, sw = {};
+let currentFilename = null;
+let currentRaw = null;
+
+// Builder state
+const VARS_ALL = ['a','b','c','d','e','f'];
+let bVarState = {}; // 0=off, 1=pos, -1=neg
+let bMinterms = [];
+let bDontcares = [];
+
+// ── Views ────────────────────────────────────────────────────
+function showView(v) {
+  document.getElementById('simulatorView').style.display = v === 'simulator' ? 'block' : 'none';
+  document.getElementById('builderView').style.display = v === 'builder' ? 'flex' : 'none';
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0) === (v==='simulator')));
+  if (v === 'builder') renderVarGrid();
+}
+
+// ── Load task list from server ───────────────────────────────
+async function loadTaskList() {
+  const res = await fetch('/api/tasks');
+  const data = await res.json();
+  renderTaskList(data.tasks, data.solutions);
+}
+
+function renderTaskList(tasks, solutions) {
+  const el = document.getElementById('taskList');
+  el.innerHTML = '';
+
+  function addGroup(label, items, folder) {
+    const lbl = document.createElement('div');
+    lbl.className = 'folder-label'; lbl.textContent = label; el.appendChild(lbl);
+    items.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'task-item';
+      item.dataset.filename = t.filename;
+      item.innerHTML = `<span class="name">${t.name}</span><span class="vars" id="vars_${t.name}"></span><span class="del-btn" title="Törlés">✕</span>`;
+      item.querySelector('.del-btn').onclick = e => { e.stopPropagation(); deleteTask(t.filename, item); };
+      item.onclick = () => { document.querySelectorAll('.task-item').forEach(i=>i.classList.remove('active')); item.classList.add('active'); loadTask(t.filename, t.name); };
+      el.appendChild(item);
+    });
+  }
+
+  addGroup('Feladatok', tasks, 'tasks');
+  addGroup('Megoldások', solutions, 'Megoldasok');
+}
+
+async function loadTask(filename, name) {
+  const res = await fetch(`/api/task/${filename}`);
+  if (!res.ok) { toast('A feladat nem tölthető be'); return; }
+  const raw = await res.text();
+  currentFilename = filename;
+  currentRaw = raw.trim();
+  document.getElementById('rawMxfText').textContent = currentRaw;
+  cur = parseMxf(currentRaw);
+  cur.label = name;
+  sw = {};
+  cur.vars.forEach(v => sw[v] = 0);
+  document.getElementById('emptyMsg').style.display = 'none';
+  document.getElementById('deviceArea').style.display = 'block';
+  renderDevice();
+  renderRight();
+  updateOutput();
+}
+
+async function deleteTask(filename, itemEl) {
+  if (!confirm('Törlöd ezt a feladatot a szerverről?')) return;
+  await fetch(`/api/delete/${filename}`, {method:'DELETE'});
+  itemEl.remove();
+  toast('Feladat törölve');
+}
+
+// ── MXF upload ───────────────────────────────────────────────
+document.getElementById('mxfInput').addEventListener('change', async function(e) {
+  for (const file of e.target.files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('folder', 'tasks');
+    const res = await fetch('/api/upload', {method:'POST', body: fd});
+    const data = await res.json();
+    if (data.ok) { toast(`Feltöltve: ${data.filename}`); loadTaskList(); }
+    else toast('Feltöltés sikertelen: ' + (data.error||''));
+  }
+  e.target.value = '';
+});
+
+// ── Download current ─────────────────────────────────────────
+function downloadCurrent() {
+  if (!currentFilename) return;
+  window.location = `/api/download/${currentFilename}`;
+}
+
+function copyMxf() {
+  if (!currentRaw) return;
+  navigator.clipboard.writeText(currentRaw).then(() => toast('Másolva!'));
+}
+
+// ── MXF Parser ───────────────────────────────────────────────
+function parseMxf(raw) {
+  const text = raw.trim().replace(/[xX]$/, '').replace(/\|$/, '');
+  const parts = text.split('|');
+  const outSig = (parts[0]||'').trim() || null;
+  const mtRaw = (parts[1]||'').split('+').map(s=>s.trim()).filter(Boolean);
+  const dcRaw = (parts[2]||'').split('+').map(s=>s.trim()).filter(Boolean);
+  const allVars = new Set();
+  [...mtRaw,...dcRaw].forEach(t=>[...t].forEach(c=>{ if(/[a-fA-F]/.test(c)) allVars.add(c.toLowerCase()); }));
+  const vars = [...allVars].sort();
+  const n = vars.length;
+  function expand(terms) {
+    const set = new Set();
+    terms.forEach(term => {
+      const fixed = {};
+      [...term].forEach(c => { const v=c.toLowerCase(); if(vars.includes(v)) fixed[v]=c===c.toUpperCase()?1:0; });
+      for (let i=0; i<(1<<n); i++) {
+        let ok = true;
+        vars.forEach((v,j) => { const bit=(i>>(n-1-j))&1; if(fixed[v]!==undefined&&fixed[v]!==bit) ok=false; });
+        if (ok) set.add(i);
+      }
+    });
+    return set;
+  }
+  return { outSig, vars, n, mt: expand(mtRaw), dc: expand(dcRaw), mtRaw, dcRaw };
+}
+
+// ── Render device ────────────────────────────────────────────
+function renderDevice() {
+  document.getElementById('taskTitle').textContent = cur.label;
+  document.getElementById('taskMeta').innerHTML =
+    `<span class="badge badge-blue">${cur.n} bemenet</span>
+     <span class="badge badge-orange">${cur.mt.size} minterm</span>
+     ${cur.dc.size ? `<span class="badge badge-yellow">${cur.dc.size} nemtörődöm</span>` : ''}`;
+
+  const swEl = document.getElementById('switches'); swEl.innerHTML = '';
+  cur.vars.forEach(v => {
+    const unit = document.createElement('div'); unit.className = 'switch-unit';
+    unit.innerHTML = `
+      <div class="switch-var-label off" id="vl_${v}">${v.toUpperCase()}</div>
+      <label class="toggle"><input type="checkbox" id="sw_${v}">
+        <div class="toggle-bg"><div class="toggle-knob"></div></div></label>
+      <div class="switch-val" id="sv_${v}">0</div>`;
+    swEl.appendChild(unit);
+    unit.querySelector('input').addEventListener('change', e => {
+      sw[v] = e.target.checked ? 1 : 0;
+      document.getElementById('vl_'+v).className = 'switch-var-label ' + (sw[v]?'on':'off');
+      const sv = document.getElementById('sv_'+v); sv.textContent = sw[v]; sv.className = 'switch-val'+(sw[v]?' on':'');
+      updateOutput();
+    });
+  });
+
+  const ledsEl = document.getElementById('leds'); ledsEl.innerHTML = '';
+  const outs = cur.outSig ? [cur.outSig.toLowerCase()] : ['y'];
+  outs.forEach(o => {
+    const unit = document.createElement('div'); unit.className = 'led-unit'; unit.id = 'lu_'+o;
+    unit.innerHTML = `<div class="led" id="led_${o}"></div><div class="led-name">${o.toUpperCase()}</div>`;
+    ledsEl.appendChild(unit);
+  });
+}
+
+function getRow() { let r=0; cur.vars.forEach((v,i) => r |= sw[v]<<(cur.n-1-i)); return r; }
+
+function updateOutput() {
+  if (!cur) return;
+  const row = getRow();
+  const on = cur.mt.has(row), dc = cur.dc.has(row);
+  const out = on ? 1 : (dc ? 'X' : 0);
+  const outs = cur.outSig ? [cur.outSig.toLowerCase()] : ['y'];
+  outs.forEach(o => {
+    const led = document.getElementById('led_'+o), lu = document.getElementById('lu_'+o);
+    if (!led) return;
+    if (on) { led.classList.add('on'); lu.classList.add('on'); }
+    else { led.classList.remove('on'); lu.classList.remove('on'); }
+  });
+  const bits = cur.vars.map((v,i) => (row>>(cur.n-1-i))&1);
+  let html = cur.vars.map((v,i) => bits[i]
+    ? `<span class="evar">${v.toUpperCase()}</span>`
+    : `<span class="ecomp">${v.toUpperCase()}</span>`
+  ).join('<span style="color:#ddd;margin:0 2px">·</span>');
+  html += `<span class="earrow">→</span>`;
+  if (out===1) html += `<span class="eout1">1&ensp;(LED világít)</span>`;
+  else if (out==='X') html += `<span class="eoutx">X&ensp;(nemtörődöm)</span>`;
+  else html += `<span class="eout0">0&ensp;(LED nem világít)</span>`;
+  document.getElementById('exprBox').innerHTML = html;
+  document.querySelectorAll('.tt-row').forEach(r=>r.classList.remove('current'));
+  const tr = document.getElementById('tr_'+row);
+  if (tr) { tr.classList.add('current'); tr.scrollIntoView({block:'nearest'}); }
+}
+
+function renderRight() {
+  const rows = 1<<cur.n;
+  let html = `<table class="truth-table"><thead><tr>${cur.vars.map(v=>`<th>${v.toUpperCase()}</th>`).join('')}<th style="color:#ea580c">Out</th></tr></thead><tbody>`;
+  for (let i=0; i<rows; i++) {
+    const on=cur.mt.has(i), dc=cur.dc.has(i);
+    const out = on?1:(dc?'X':0);
+    const bits = cur.vars.map((_,j)=>(i>>(cur.n-1-j))&1);
+    html += `<tr class="tt-row" id="tr_${i}">${bits.map(b=>`<td class="${b?'v1':'v0'}">${b}</td>`).join('')}<td class="${on?'out1':(dc?'outx':'out0')}">${out}</td></tr>`;
+  }
+  html += `</tbody></table>`;
+  if (cur.mt.size) {
+    html += `<div style="margin-top:14px"><div class="mlabel">Mintermek</div><div class="chips">`;
+    [...cur.mt].sort((a,b)=>a-b).forEach(m => html+=`<span class="chip chip-m">m${m}</span>`);
+    html += `</div></div>`;
+  }
+  if (cur.dc.size) {
+    html += `<div style="margin-top:10px"><div class="mlabel">Nemtörődöm tagok</div><div class="chips">`;
+    [...cur.dc].sort((a,b)=>a-b).forEach(m => html+=`<span class="chip chip-d">d${m}</span>`);
+    html += `</div></div>`;
+  }
+  function rTerm(term){ return [...term].map(c=>/[A-F]/.test(c)?`<span class="rb">${c}</span>`:/[a-f]/.test(c)?`<span class="rt">${c.toUpperCase()}</span>`:c).join(''); }
+  html += `<div class="mlabel" style="margin-top:14px">Kifejezés</div><div class="raw-expr">`;
+  html += cur.mtRaw.length ? cur.mtRaw.map(t=>rTerm(t)).join(' <span class="rp">+</span> ') : `<span style="color:#bbb">∅</span>`;
+  if (cur.dcRaw.length) html += ` <span class="rp">&nbsp;| nemtörődöm:</span> `+cur.dcRaw.map(t=>rTerm(t)).join(' <span class="rp">+</span> ');
+  html += `</div>`;
+  document.getElementById('rightPanel').innerHTML = html;
+}
+
+// ── Builder ──────────────────────────────────────────────────
+function renderVarGrid() {
+  const grid = document.getElementById('varGrid'); grid.innerHTML = '';
+  VARS_ALL.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'var-chip-btn';
+    const s = bVarState[v] || 0;
+    btn.className = 'var-chip-btn' + (s===1?' sel-pos':s===-1?' sel-neg':'');
+    btn.textContent = s===-1 ? v.toUpperCase() : v.toUpperCase();
+    if (s===-1) btn.style.textDecoration = 'overline';
+    else btn.style.textDecoration = '';
+    btn.title = s===0?'Click to add as positive':s===1?'Click to make complement':'Click to remove';
+    btn.onclick = () => {
+      bVarState[v] = ((bVarState[v]||0)+1+2)%3 - 1; // cycles: 0→1→-1→0
+      // fix: 0→1→-1→0
+      const cur2 = bVarState[v]||0;
+      if (cur2===0 && (bVarState[v]||0)===0) { /* already 0 */ }
+      renderVarGrid(); updatePreview();
+    };
+    grid.appendChild(btn);
+  });
+}
+// Fix cycling: 0 → 1 → -1 → 0
+function cycleVar(v) {
+  const c = bVarState[v]||0;
+  bVarState[v] = c===0?1:c===1?-1:0;
+  renderVarGrid(); updatePreview();
+}
+// Re-attach after render
+setTimeout(() => {
+  document.getElementById('varGrid')?.addEventListener('click', e => {
+    const btn = e.target.closest('.var-chip-btn'); if (!btn) return;
+    const v = btn.textContent.trim().toLowerCase();
+    cycleVar(v);
+  });
+}, 100);
+
+function currentTermStr() {
+  return VARS_ALL.filter(v=>(bVarState[v]||0)!==0)
+    .map(v => bVarState[v]===1 ? v.toUpperCase() : v.toLowerCase()).join('');
+}
+
+function addTerm(type) {
+  const term = currentTermStr();
+  if (!term) { toast('Válassz legalább egy változót'); return; }
+  if (type==='mt') { if(!bMinterms.includes(term)) bMinterms.push(term); }
+  else { if(!bDontcares.includes(term)) bDontcares.push(term); }
+  updatePreview(); renderTermLists();
+}
+
+function renderTermLists() {
+  function render(list, elId, type) {
+    const el = document.getElementById(elId); el.innerHTML = '';
+    list.forEach((term,i) => {
+      const tag = document.createElement('div'); tag.className='term-tag';
+      tag.innerHTML = renderTermHtml(term) + `<span class="x">✕</span>`;
+      tag.onclick = () => { list.splice(i,1); renderTermLists(); updatePreview(); };
+      el.appendChild(tag);
+    });
+  }
+  render(bMinterms,'mtList','mt');
+  render(bDontcares,'dcList','dc');
+}
+
+function renderTermHtml(term) {
+  return [...term].map(c=>/[A-F]/.test(c)?`<span style="color:#1d4ed8;font-weight:700">${c}</span>`:`<span style="color:#dc2626;font-weight:700;text-decoration:overline;text-decoration-thickness:1.5px">${c.toUpperCase()}</span>`).join('');
+}
+
+function buildMxfContent() {
+  const out = (document.getElementById('bOutput')?.value||'').trim().slice(0,1).toLowerCase();
+  const mt = bMinterms.join('+');
+  const dc = bDontcares.join('+');
+  return `${out}|${mt}|${dc}|x`;
+}
+
+function updatePreview() {
+  document.getElementById('mxfPreview').textContent = buildMxfContent();
+}
+
+async function saveTask() {
+  const name = document.getElementById('bName').value.trim();
+  if (!name) { toast('Add meg a feladat nevét'); return; }
+  const content = buildMxfContent();
+  const res = await fetch('/api/save', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, content, folder:'tasks'})
+  });
+  const data = await res.json();
+  if (data.ok) { toast(`Saved: ${data.filename}`); loadTaskList(); }
+  else toast('Mentés sikertelen');
+}
+
+function downloadBuilt() {
+  const name = (document.getElementById('bName').value.trim()||'task');
+  const content = buildMxfContent();
+  const blob = new Blob([content], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name+'.mxf';
+  a.click();
+}
+
+function loadBuiltIntoSim() {
+  const name = (document.getElementById('bName').value.trim()||'built_task');
+  const raw = buildMxfContent();
+  currentRaw = raw; currentFilename = null;
+  cur = parseMxf(raw); cur.label = name;
+  sw = {}; cur.vars.forEach(v=>sw[v]=0);
+  showView('simulator');
+  document.getElementById('emptyMsg').style.display='none';
+  document.getElementById('deviceArea').style.display='block';
+  document.getElementById('rawMxfText').textContent = raw;
+  renderDevice(); renderRight(); updateOutput();
+  toast('Betöltve a szimulátorba!');
+}
+
+// ── Toast ────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// ── Init ─────────────────────────────────────────────────────
+loadTaskList();
+updatePreview();
+</script>
+</body>
+</html>
